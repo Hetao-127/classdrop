@@ -14,12 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 下载页面
+      - name: 下载页面并预填仓库信息
         env:
           PAGE_URL: https://aka.doubaocdn.com/s/9TFnRcbNVh
         run: |
           curl -fsSL "$PAGE_URL" -o index.html
-          echo "大小：$(wc -c < index.html) 字节"
+          sed -i "s/owner: ''/owner: 'Hetao-127'/" index.html
+          sed -i "s/repo: ''/repo: 'classdrop'/" index.html
+          grep -o "cfg: { owner:.*" index.html | head -1
       - name: 提交到仓库
         run: |
           git config user.name "classdrop-bot"
