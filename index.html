@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>班级文件中转站</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f3d2e'/%3E%3Cpath d='M9 13h5l2 2h7v8H9z' fill='%23d8f3e4'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#f6f5f1;
+    --panel:#ffffff;
+    --ink:#1c1c1a;
+    --ink-2:#5c5d58;
+    --ink-3:#8d8e88;
+    --line:#dedcd4;
+    --accent:#0f3d2e;
+    --accent-soft:#e4efe7;
+    --warn:#8a4b12;
+    --warn-soft:#fbf0e2;
+    --ok:#1c6b45;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  main{max-width:760px;margin:0 auto;padding:20px 16px 64px}
+
+  /* ---------- 顶部 ---------- */
+  header{padding:14px 2px 22px}
+  .kicker{
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:12.5px;letter-spacing:.08em;color:var(--ink-3);
+    text-transform:uppercase;margin-bottom:10px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-3);flex:none}
+  .dot.on{background:var(--ok)}
+  h1{font-size:27px;line-height:1.25;margin:0 0 8px;letter-spacing:-.02em}
+  .sub{margin:0;color:var(--ink-2);font-size:14.5px;max-width:52ch}
+
+  /* ---------- 通用面板 ---------- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .panel-title{font-size:15px;font-weight:600;letter-spacing:.01em}
+  .hint{font-size:13px;color:var(--ink-3);margin:0}
+
+  /* ---------- 表单 ---------- */
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:640px){.grid{grid-template-columns:1fr 1fr}}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .field label{font-size:13px;color:var(--ink-2);font-weight:500}
+  .field input{
+    width:100%;min-height:44px;padding:10px 12px;
+    font-size:16px;font-family:inherit;color:var(--ink);
+    background:#fbfaf7;border:1px solid var(--line);border-radius:10px;
+    outline:none;transition:border-color .15s,background .15s;
+  }
+  .field input:focus{border-color:var(--accent);background:#fff}
+  .field .tip{font-size:12px;color:var(--ink-3);line-height:1.45}
+  .full{grid-column:1/-1}
+
+  /* ---------- 按钮 ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    min-height:44px;padding:0 18px;border-radius:10px;border:1px solid transparent;
+    font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;
+    transition:transform .12s,background .15s,border-color .15s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:#f1f8f3}
+  .btn-primary:hover{background:#0b3024}
+  .btn-primary:disabled{background:#a9b6ae;cursor:not-allowed;transform:none}
+  .btn-ghost{background:#fff;color:var(--ink);border-color:var(--line)}
+  .btn-ghost:hover{border-color:#bfbcb1;background:#faf9f5}
+  .btn-sm{min-height:36px;padding:0 12px;font-size:13px;border-radius:8px;font-weight:500}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+
+  /* ---------- 上传区 ---------- */
+  .drop{
+    border:1.5px dashed #c8c5b9;border-radius:12px;
+    padding:26px 16px;text-align:center;background:#fbfaf7;
+    transition:border-color .15s,background .15s;cursor:pointer;
+  }
+  .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+  .drop.is-disabled{opacity:.55;cursor:not-allowed}
+  .drop.is-disabled:hover{border-color:#c8c5b9;background:#fbfaf7}
+  .drop-icon{width:34px;height:34px;margin:0 auto 10px;display:block;color:var(--accent)}
+  .drop-main{font-size:16px;font-weight:600;margin:0 0 4px}
+  .drop-sub{font-size:13.5px;color:var(--ink-2);margin:0}
+  #fileInput{display:none}
+
+  .queue{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+  .qitem{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbfaf7}
+  .qtop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .qname{font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .qsize{font-size:12px;color:var(--ink-3);flex:none}
+  .bar{height:5px;border-radius:99px;background:#e6e3da;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+  .qstatus{font-size:12px;color:var(--ink-3);margin-top:6px}
+
+  /* ---------- 文件列表 ---------- */
+  .files{margin-top:14px;display:flex;flex-direction:column}
+  .fitem{
+    display:flex;align-items:flex-start;gap:12px;
+    padding:13px 2px;border-top:1px solid var(--line);
+  }
+  .fitem:first-child{border-top:none}
+  .ficon{width:34px;height:34px;flex:none;border-radius:8px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent)}
+  .fmain{flex:1;min-width:0}
+  .fname{font-size:14.5px;font-weight:600;word-break:break-all;line-height:1.4}
+  .fmeta{font-size:12.5px;color:var(--ink-3);margin-top:3px;display:flex;flex-wrap:wrap;gap:6px 12px}
+  .fmeta .exp{color:var(--warn)}
+  .factions{display:flex;flex-direction:column;gap:6px;flex:none;width:100px}
+  .factions .btn{width:100%}
+  @media(max-width:560px){
+    .fitem{flex-wrap:wrap}
+    .factions{flex-direction:row;width:100%}
+    .factions .btn{width:auto;flex:1}
+  }
+  .empty{padding:26px 0;text-align:center;color:var(--ink-3);font-size:14px}
+
+  /* ---------- 提示条 ---------- */
+  .notice{
+    display:flex;gap:10px;padding:11px 13px;border-radius:10px;
+    background:var(--warn-soft);color:var(--warn);font-size:13px;line-height:1.5;
+    margin-bottom:14px;border:1px solid #f0dcc2;
+  }
+  .notice b{font-weight:600}
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);
+    background:#14261d;color:#eaf4ee;padding:10px 16px;border-radius:99px;
+    font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+    z-index:50;max-width:88vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  footer{color:var(--ink-3);font-size:12.5px;line-height:1.7;padding:10px 2px 0}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+  details summary{cursor:pointer;font-size:13px;color:var(--ink-2);min-height:32px;display:flex;align-items:center}
+  details[open] summary{margin-bottom:10px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="kicker"><span class="dot" id="stateDot"></span><span id="stateText">未连接仓库</span></div>
+    <h1>班级文件中转站</h1>
+    <p class="sub">老师传上来，同学拿走。文件存在公开仓库的 Release 里，到期自动清理，全程不花钱。</p>
+  </header>
+
+  <!-- ===== 配置 ===== -->
+  <section class="panel">
+    <details id="setupBox">
+      <summary id="setupSummary">仓库设置（第一次使用先填这里）</summary>
+      <div class="grid">
+        <div class="field">
+          <label for="owner">GitHub 用户名</label>
+          <input id="owner" placeholder="例如 xiaoming" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="repo">仓库名</label>
+          <input id="repo" placeholder="例如 classdrop" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="field full">
+          <label for="token">上传凭证（PAT，只在上传的这台设备上保存）</label>
+          <input id="token" type="password" placeholder="github_pat_… 或 ghp_…" autocomplete="off" spellcheck="false">
+          <span class="tip">在 GitHub → Settings → Developer settings → Personal access tokens 生成，勾选 <span class="mono">repo</span> 权限。不填也能看列表和下载。</span>
+        </div>
+        <div class="field">
+          <label for="passcode">班级口令（留空则不需要）</label>
+          <input id="passcode" placeholder="例如 3ban2026" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="retention">保留天数</label>
+          <input id="retention" type="number" min="1" max="30" value="7" inputmode="numeric">
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-primary" id="saveBtn">保存设置</button>
+        <button class="btn btn-ghost" id="testBtn">测试连接</button>
+      </div>
+      <p class="hint" style="margin-top:10px">设置只存在这台设备的浏览器里，不会发到任何服务器。</p>
+    </details>
+  </section>
+
+  <!-- ===== 上传 ===== -->
+  <section class="panel" id="uploadPanel">
+    <div class="panel-head">
+      <span class="panel-title">上传文件</span>
+      <span class="hint" id="limitHint">单文件建议 ≤ 200 MB</span>
+    </div>
+    <div id="passGate" style="display:none">
+      <div class="field">
+        <label for="passInput">先输入班级口令</label>
+        <input id="passInput" placeholder="问班长要" autocomplete="off">
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn btn-primary" id="passBtn">进入上传</button>
+      </div>
+    </div>
+    <div id="uploadBody">
+      <div class="drop" id="dropZone" role="button" tabindex="0" aria-label="选择要上传的文件">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V5"/><path d="m7 10 5-5 5 5"/><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13A1.5 1.5 0 0 0 20 18.5V16"/></svg>
+        <p class="drop-main">点这里选文件</p>
+        <p class="drop-sub">也可以把文件拖进来，支持一次选多个</p>
+      </div>
+      <input id="fileInput" type="file" multiple>
+      <div class="queue" id="queue"></div>
+    </div>
+  </section>
+
+  <!-- ===== 文件列表 ===== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-title">可下载的文件</span>
+      <button class="btn btn-ghost btn-sm" id="refreshBtn">刷新</button>
+    </div>
+    <div class="files" id="fileList">
+      <div class="empty">还没有文件。上传后这里会显示下载链接。</div>
+    </div>
+  </section>
+
+  <div class="notice" id="speedNotice">
+    <span>国内下载 GitHub 的速度看运营商，100 MB 大约几十秒到两分钟。慢的时候换手机流量或换个时段试试。</span>
+  </div>
+
+  <footer>
+    <p style="margin:0 0 6px">文件放在公开仓库，知道链接的人都能下载，别传隐私内容。到期后由仓库里的定时任务自动删除。</p>
+    <p style="margin:0" class="mono" id="repoLine">—</p>
+  </footer>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+/* ========== 配置 ========== */
+const API = 'https://api.github.com';
+const UPLOADS = 'https://uploads.github.com';
+const TAG = 'classdrop';
+const CFG_KEY = 'classdrop_config_v1';
+const PASS_KEY = 'classdrop_pass_ok';
+const MAX_MB = 200;
+
+const state = {
+  cfg: { owner: '', repo: '', token: '', passcode: '', retention: 7 },
+  files: [],
+  loading: false,
+  uploading: false
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtSize = (n) => {
+  if (!Number.isFinite(n)) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  return (n / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+};
+const fmtTime = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const daysLeft = (iso) => {
+  const created = new Date(iso).getTime();
+  const left = created + state.cfg.retention * 86400000 - Date.now();
+  return Math.max(0, Math.ceil(left / 86400000));
+};
+
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function loadCfg() {
+  try {
+    const raw = localStorage.getItem(CFG_KEY);
+    if (raw) state.cfg = Object.assign(state.cfg, JSON.parse(raw));
+  } catch (e) {}
+  $('owner').value = state.cfg.owner;
+  $('repo').value = state.cfg.repo;
+  $('token').value = state.cfg.token;
+  $('passcode').value = state.cfg.passcode;
+  $('retention').value = state.cfg.retention;
+}
+function saveCfg() {
+  state.cfg = {
+    owner: $('owner').value.trim(),
+    repo: $('repo').value.trim(),
+    token: $('token').value.trim(),
+    passcode: $('passcode').value.trim(),
+    retention: Math.min(30, Math.max(1, parseInt($('retention').value, 10) || 7))
+  };
+  localStorage.setItem(CFG_KEY, JSON.stringify(state.cfg));
+  if (configured()) $('setupBox').open = false;
+  renderState();
+  toast('设置已保存');
+}
+function configured() {
+  return Boolean(state.cfg.owner && state.cfg.repo);
+}
+function headers(extra) {
+  const h = Object.assign({ 'Accept': 'application/vnd.github+json' }, extra || {});
+  if (state.cfg.token) h['Authorization'] = 'Bearer ' + state.cfg.token;
+  return h;
+}
+function repoPath() {
+  return `/repos/${state.cfg.owner}/${state.cfg.repo}`;
+}
+
+/* ========== 状态与门禁 ========== */
+function renderState() {
+  const dot = $('stateDot');
+  const txt = $('stateText');
+  if (configured()) {
+    dot.classList.add('on');
+    txt.textContent = state.cfg.owner + '/' + state.cfg.repo;
+    $('repoLine').textContent = `github.com/${state.cfg.owner}/${state.cfg.repo} · releases/${TAG}`;
+  } else {
+    dot.classList.remove('on');
+    txt.textContent = '未连接仓库';
+    $('repoLine').textContent = '—';
+  }
+  const needPass = Boolean(state.cfg.passcode) && sessionStorage.getItem(PASS_KEY) !== '1';
+  $('passGate').style.display = needPass ? 'block' : 'none';
+  $('uploadBody').style.display = needPass ? 'none' : 'block';
+  $('uploadPanel').style.display = 'block';
+  $('dropZone').classList.toggle('is-disabled', !configured());
+}
+
+/* ========== GitHub 请求 ========== */
+async function gh(path, opts) {
+  const o = Object.assign({ method: 'GET' }, opts || {});
+  const h = headers(o.body ? { 'Content-Type': 'application/json' } : {});
+  o.headers = Object.assign(h, o.headers || {});
+  return fetch(API + path, o);
+}
+
+async function ensureRelease() {
+  if (!configured()) throw new Error('先在“仓库设置”里填用户名和仓库名');
+  if (!state.cfg.token) throw new Error('上传需要填写 PAT');
+  let res = await gh(repoPath() + '/releases/tags/' + TAG, { method: 'GET' });
+  if (res.ok) return res.json();
+  if (res.status !== 404) {
+    const t = await res.text();
+    throw new Error('读取 Release 失败：' + res.status + ' ' + t.slice(0, 120));
+  }
+  const c = await gh(repoPath() + '/releases', {
+    method: 'POST',
+    body: JSON.stringify({
+      tag_name: TAG,
+      name: '班级文件',
+      body: '由班级文件中转站自动创建，请勿手动删除。',
+      prerelease: false
+    })
+  });
+  if (!c.ok) {
+    const t = await c.text();
+    throw new Error('创建 Release 失败：' + c.status + ' ' + t.slice(0, 160));
+  }
+  return c.json();
+}
+
+/* ========== 文件列表 ========== */
+function fileIcon(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase().slice(0, 4);
+  return `<span style="font-size:10px;font-weight:700;letter-spacing:.03em">${esc(ext || 'FILE')}</span>`;
+}
+
+function renderFiles() {
+  const box = $('fileList');
+  if (!configured()) {
+    box.innerHTML = '<div class="empty">先在“仓库设置”里填用户名和仓库名。</div>';
+    return;
+  }
+  if (state.loading) {
+    box.innerHTML = '<div class="empty">读取中…</div>';
+    return;
+  }
+  if (!state.files.length) {
+    box.innerHTML = '<div class="empty">还没有文件。上传后这里会显示下载链接。</div>';
+    return;
+  }
+  box.innerHTML = state.files.map((f) => {
+    const left = daysLeft(f.created);
+    return `<div class="fitem">
+      <div class="ficon">${fileIcon(f.name)}</div>
+      <div class="fmain">
+        <div class="fname">${esc(f.name)}</div>
+        <div class="fmeta"><span>${fmtSize(f.size)}</span><span>${fmtTime(f.created)}</span><span class="exp">${left > 0 ? left + ' 天后清理' : '待清理'}</span></div>
+      </div>
+      <div class="factions">
+        <button class="btn btn-primary btn-sm" data-copy="${esc(f.url)}">复制链接</button>
+        <a class="btn btn-ghost btn-sm" href="${esc(f.url)}" target="_blank" rel="noopener">下载</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadFiles() {
+  if (!configured()) return;
+  state.loading = true;
+  renderFiles();
+  try {
+    const res = await gh(repoPath() + '/releases/tags/' + TAG, { method: 'GET' });
+    if (res.status === 404) {
+      state.files = [];
+    } else if (!res.ok) {
+      throw new Error(res.status === 403 ? '请求被限流，填 PAT 后重试' : '读取失败 ' + res.status);
+    } else {
+      const data = await res.json();
+      state.files = (data.assets || []).map((a) => ({
+        name: a.name,
+        size: a.size,
+        created: a.created_at,
+        url: a.browser_download_url
+      })).sort((a, b) => new Date(b.created) - new Date(a.created));
+    }
+  } catch (e) {
+    toast(e.message || '读取失败');
+  }
+  state.loading = false;
+  renderFiles();
+}
+
+/* ========== 上传 ========== */
+function uploadOne(file, releaseId) {
+  return new Promise((resolve, reject) => {
+    const row = document.createElement('div');
+    row.className = 'qitem';
+    row.innerHTML = `<div class="qtop"><span class="qname">${esc(file.name)}</span><span class="qsize">${fmtSize(file.size)}</span></div>
+      <div class="bar"><i></i></div><div class="qstatus">准备上传…</div>`;
+    $('queue').appendChild(row);
+    const bar = row.querySelector('.bar > i');
+    const st = row.querySelector('.qstatus');
+
+    const url = `${UPLOADS}/repos/${state.cfg.owner}/${state.cfg.repo}/releases/${releaseId}/assets?name=${encodeURIComponent(file.name)}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + state.cfg.token);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        bar.style.width = pct + '%';
+        st.textContent = `上传中 ${pct}% · ${fmtSize(e.loaded)} / ${fmtSize(e.total)}`;
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        bar.style.width = '100%';
+        st.textContent = '已完成';
+        resolve();
+      } else {
+        let msg = xhr.responseText || '';
+        try { msg = JSON.parse(msg).message || msg; } catch (err) {}
+        st.textContent = '失败 ' + xhr.status;
+        reject(new Error(`上传失败 ${xhr.status}：${String(msg).slice(0, 120)}`));
+      }
+    };
+    xhr.onerror = () => {
+      st.textContent = '网络中断';
+      reject(new Error('网络中断，检查网络后重试'));
+    };
+    xhr.ontimeout = () => reject(new Error('上传超时'));
+    xhr.send(file);
+  });
+}
+
+async function handleFiles(files) {
+  if (state.uploading) return;
+  const list = Array.from(files || []);
+  if (!list.length) return;
+  if (!configured()) { toast('先在“仓库设置”里填用户名和仓库名'); return; }
+  if (!state.cfg.token) { toast('上传需要先填 PAT'); return; }
+
+  state.uploading = true;
+  try {
+    const rel = await ensureRelease();
+    for (const f of list) {
+      if (f.size > MAX_MB * 1024 * 1024) {
+        toast(`${f.name} 超过 ${MAX_MB}MB，会比较慢，建议压一下再传`);
+      }
+      try {
+        await uploadOne(f, rel.id);
+        toast(`已上传：${f.name}`);
+      } catch (e) {
+        toast(e.message);
+      }
+    }
+  } catch (e) {
+    toast(e.message);
+  }
+  state.uploading = false;
+  $('fileInput').value = '';
+  loadFiles();
+}
+
+/* ========== 复制 ========== */
+async function copyText(t) {
+  try {
+    await navigator.clipboard.writeText(t);
+    toast('链接已复制');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('链接已复制'); }
+    catch (err) { toast('复制失败，长按链接手动复制'); }
+    ta.remove();
+  }
+}
+
+/* ========== 事件 ========== */
+$('saveBtn').addEventListener('click', () => {
+  saveCfg();
+  loadFiles();
+});
+
+$('testBtn').addEventListener('click', async () => {
+  if (!configured()) { toast('先填用户名和仓库名'); return; }
+  try {
+    const res = await gh(repoPath());
+    if (res.ok) {
+      const d = await res.json();
+      toast('连接成功：' + d.full_name + (d.private ? '（私有仓库，下载要登录）' : '（公开仓库）'));
+    } else {
+      toast('连接失败 ' + res.status + (res.status === 404 ? '，检查用户名/仓库名' : ''));
+    }
+  } catch (e) {
+    toast('网络不通，稍后再试');
+  }
+});
+
+$('refreshBtn').addEventListener('click', loadFiles);
+
+$('dropZone').addEventListener('click', () => {
+  if (!configured()) {
+    $('setupBox').open = true;
+    toast('先在“仓库设置”里填用户名和仓库名');
+    return;
+  }
+  $('fileInput').click();
+});
+$('dropZone').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fileInput').click(); }
+});
+$('dropZone').addEventListener('dragover', (e) => {
+  e.preventDefault();
+  $('dropZone').classList.add('over');
+});
+$('dropZone').addEventListener('dragleave', () => $('dropZone').classList.remove('over'));
+$('dropZone').addEventListener('drop', (e) => {
+  e.preventDefault();
+  $('dropZone').classList.remove('over');
+  handleFiles(e.dataTransfer.files);
+});
+$('fileInput').addEventListener('change', (e) => handleFiles(e.target.files));
+
+$('passBtn').addEventListener('click', () => {
+  const v = $('passInput').value.trim();
+  if (v && v === state.cfg.passcode) {
+    sessionStorage.setItem(PASS_KEY, '1');
+    renderState();
+    toast('口令正确');
+  } else {
+    toast('口令不对，问班长要');
+  }
+});
+
+$('fileList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-copy]');
+  if (!btn) return;
+  copyText(btn.getAttribute('data-copy'));
+});
+
+/* ========== 启动 ========== */
+loadCfg();
+renderState();
+if (!configured()) $('setupBox').open = true;
+renderFiles();
+if (configured()) loadFiles();
+</script>
+</body>
+</html>
+
+
