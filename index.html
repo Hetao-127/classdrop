@@ -595,7 +595,7 @@ $('fileList').addEventListener('click', (e) => {
 /* ========== 启动 ========== */
 loadCfg();
 renderState();
-if (!configured()) $('setupBox').open = true;
+if (!configured() || !state.cfg.token) $('setupBox').open = true;
 renderFiles();
 if (configured()) loadFiles();
 </script>
