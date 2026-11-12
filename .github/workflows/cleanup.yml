@@ -1,0 +1,41 @@
+name: 清理过期文件
+
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 删除超过保留期的附件
+        uses: actions/github-script@v7
+        env:
+          KEEP_DAYS: '7'
+        with:
+          script: |
+            const tag = 'classdrop';
+            const days = Number(process.env.KEEP_DAYS || 7);
+            const cutoff = Date.now() - days * 86400000;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            let rel;
+            try {
+              rel = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+            } catch (e) {
+              core.info('还没有 Release，跳过');
+              return;
+            }
+            let removed = 0;
+            for (const asset of rel.data.assets) {
+              if (new Date(asset.created_at).getTime() < cutoff) {
+                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
+                core.info('已删除 ' + asset.name);
+                removed++;
+              }
+            }
+            core.info('本次删除 ' + removed + ' 个文件');
