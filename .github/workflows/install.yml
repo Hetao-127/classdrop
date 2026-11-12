@@ -14,14 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 下载页面并预填仓库信息
+      - name: 下载页面、预填仓库信息、自动展开设置
         env:
           PAGE_URL: https://aka.doubaocdn.com/s/9TFnRcbNVh
         run: |
           curl -fsSL "$PAGE_URL" -o index.html
           sed -i "s/owner: ''/owner: 'Hetao-127'/" index.html
           sed -i "s/repo: ''/repo: 'classdrop'/" index.html
-          grep -o "cfg: { owner:.*" index.html | head -1
+          sed -i "s/if (!configured()) \$('setupBox').open = true;/if (!configured() || !state.cfg.token) \$('setupBox').open = true;/" index.html
+          grep -c "state.cfg.token" index.html
+          wc -c index.html
       - name: 提交到仓库
         run: |
           git config user.name "classdrop-bot"
