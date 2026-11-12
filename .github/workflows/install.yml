@@ -1,0 +1,30 @@
+name: 安装页面
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    if: contains(github.event.head_commit.message, '[install-page]') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 下载页面
+        env:
+          PAGE_URL: https://aka.doubaocdn.com/s/9TFnRcbNVh
+        run: |
+          curl -fsSL "$PAGE_URL" -o index.html
+          echo "大小：$(wc -c < index.html) 字节"
+      - name: 提交到仓库
+        run: |
+          git config user.name "classdrop-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet && echo "无变化" && exit 0
+          git commit -m "chore: 安装页面"
+          git push
